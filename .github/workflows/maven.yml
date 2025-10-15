@@ -1,0 +1,130 @@
+name: maven-cicd
+
+on:
+  # for regular master build (after the merge)
+  push:
+    branches:
+    - main
+  # for PRs from forked repos and non forked repos
+  # in order to write status info to the PR we require write repository token (https://github.blog/2020-08-03-github-actions-improvements-for-fork-and-pull-request-workflows/)
+  pull_request:
+    branches:
+    - main
+    types: [opened, synchronize, reopened]
+
+# restrict privileges except for setting commit status, adding PR comments and writing statuses
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  deployments: read
+  issues: read
+  packages: read
+  pull-requests: write
+  repository-projects: read
+  security-events: read
+  statuses: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        jdk: [21, 25]
+        include:
+          # lengthy build steps should only be performed on linux with Java 17 (Sonarcloud analysis, deployment)
+          - os: ubuntu-latest
+            jdk: 21
+            isMainBuildEnv: true
+            namePrefix: 'Main '
+      fail-fast: false
+
+    name: ${{ matrix.namePrefix }} Maven build (${{ matrix.os }}, JDK ${{ matrix.jdk }})
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # always act on the modified source code (even for event pull_request_target)
+        # is considered potentially unsafe (https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) but actions are only executed after approval from committers
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # no additional git operations after checkout triggered in workflow, no need to store credentials
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          cache: 'maven'
+          distribution: 'temurin'
+          java-version: ${{ matrix.jdk }}
+          # generate settings.xml with the correct values
+          server-id: sonatype-central-portal # Value of the distributionManagement/repository/id field of the pom.xml
+          server-username: MAVEN_USERNAME # env variable for username in deploy
+          server-password: MAVEN_PASSWORD # env variable for token in deploy
+
+      # sets environment variables to be used in subsequent steps: https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
+      - name: Set environment variables
+        shell: bash
+        run: |
+          if [ "${{ matrix.isMainBuildEnv }}" = "true" ]; then
+            echo "MVN_ADDITIONAL_OPTS=-Dsonar.projectKey=Netcentric_bundle-namespace-validators -Dsonar.organization=netcentric -Dsonar.host.url=https://sonarcloud.io -Pjacoco-report" >> $GITHUB_ENV
+            if [ "${{github.ref}}" = "refs/heads/main" ] && [ "${{github.event_name}}" = "push" ]; then
+              echo "MVN_GOAL=clean deploy org.sonarsource.scanner.maven:sonar-maven-plugin:sonar" >> $GITHUB_ENV
+              echo "STEP_NAME_SUFFIX=(Deploys to Central Portal)" >> $GITHUB_ENV
+            else
+              echo "MVN_GOAL=clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.2.0.4988:sonar" >> $GITHUB_ENV
+            fi
+          else
+            echo "MVN_ADDITIONAL_OPTS=" >> $GITHUB_ENV
+            echo "MVN_GOAL=clean verify" >> $GITHUB_ENV
+          fi
+      - name: Set up Maven
+        # https://maven.apache.org/wrapper/#using-a-different-version-of-maven
+        run: mvn --errors --batch-mode --show-version org.apache.maven.plugins:maven-wrapper-plugin:3.3.4:wrapper "-Dmaven=3.9.11"
+
+      - name: ${{ matrix.namePrefix }} Build with Maven ${{ env.STEP_NAME_SUFFIX }}
+        env: 
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAVEN_USERNAME: ${{ secrets.SONATYPE_CENTRAL_TOKEN_USER }}
+          MAVEN_PASSWORD: ${{ secrets.SONATYPE_CENTRAL_TOKEN_PASSWORD }}
+        run: ./mvnw -e -B -V ${{ env.MVN_GOAL }} ${{ env.MVN_ADDITIONAL_OPTS }}
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test Results (${{ matrix.os }}, JDK ${{ matrix.jdk }}))
+          path: |
+            target/surefire-reports/TEST*.xml
+            target/invoker-reports/TEST*.xml
+            target/it/**/build.log
+
+  publish-test-results:
+    name: "Publish Tests Results"
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+
+      # only needed unless run with comment_mode: off
+      pull-requests: write
+
+      # only needed for private repository
+      contents: read
+
+      # only needed for private repository
+      issues: read
+    if: always()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@3a74b2957438d0b6e2e61d67b05318aa25c9e6c6
+        with:
+          files: "artifacts/**/*.xml"
