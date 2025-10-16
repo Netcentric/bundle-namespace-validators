@@ -18,11 +18,15 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -107,13 +111,19 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
     private static final Collection<Pattern> ALLOWED_TENANT_SPECIFIC_SERVICES;
 
     static {
+        // list those service interfaces which fully support multi-tenancy or are known to almost never clash
         ALLOWED_TENANT_SPECIFIC_SERVICES = new LinkedList<>();
-        // TODO: conditionally add depending on the multi-tenancy property is being validated
         SERVLET_INTERFACES.forEach(
                 iface -> ALLOWED_TENANT_SPECIFIC_SERVICES.add(Pattern.compile(Pattern.quote(iface))));
         FILTER_INTERFACES.forEach(iface -> ALLOWED_TENANT_SPECIFIC_SERVICES.add(Pattern.compile(Pattern.quote(iface))));
         ALLOWED_TENANT_SPECIFIC_SERVICES.add(
                 Pattern.compile(Pattern.quote("org.apache.sling.api.adapter.AdapterFactory")));
+        ALLOWED_TENANT_SPECIFIC_SERVICES.add(
+                Pattern.compile(Pattern.quote("org.apache.sling.rewriter.TransformerFactory")));
+        ALLOWED_TENANT_SPECIFIC_SERVICES.add(
+                Pattern.compile(Pattern.quote("com.adobe.granite.workflow.exec.WorkflowProcess")));
+        ALLOWED_TENANT_SPECIFIC_SERVICES.add(
+                Pattern.compile(Pattern.quote("com.day.cq.workflow.exec.WorkflowProcess")));
         ALLOWED_TENANT_SPECIFIC_SERVICES.add(Pattern.compile(Pattern.quote(AUTHENTICATION_HANDLER_INTERFACE)));
     }
 
@@ -475,12 +485,12 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
         boolean isAuthenticationHandlerComponent =
                 isComponentImplementingInterface(root, AUTHENTICATION_HANDLER_INTERFACE);
 
-        Map<String, String> properties = getComponentProperties(root);
+        Map<String, Collection<String>> properties = getComponentProperties(root);
 
         // Validate service interfaces if pattern is configured
         if (config.allowedServiceClassPatterns() != null
                 && !config.allowedServiceClassPatterns().isEmpty()) {
-            validateServiceInterfaces(componentName, root);
+            validateServiceProviders(componentName, root);
         }
 
         // Validate Sling servlet properties if this is a servlet component and patterns are configured
@@ -519,9 +529,9 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
     }
 
     /**
-     * Validates service interfaces against the configured pattern.
+     * Validates service provider classes against the configured patterns.
      */
-    private void validateServiceInterfaces(String componentName, Element componentElement) {
+    private void validateServiceProviders(String componentName, Element componentElement) {
         NodeList serviceElements = componentElement.getElementsByTagName(DS_SERVICE_ELEMENT);
         for (int i = 0; i < serviceElements.getLength(); i++) {
             Element serviceElement = (Element) serviceElements.item(i);
@@ -548,19 +558,34 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
     }
 
     /**
-     * Retrieves all properties of a DS component as a map of property name to value.
-     * Only handles properties with a 'value' attribute (not text content or multi-valued properties).
+     * Retrieves all properties of a DS component as a map of property name to collection of values.
+     * Handles properties with a 'value' attribute (comma-separated values) and supports multi-valued properties.
      */
-    private Map<String, String> getComponentProperties(Element componentElement) {
-        Map<String, String> properties = new java.util.HashMap<>();
+    private Map<String, Collection<String>> getComponentProperties(Element componentElement) {
+        Map<String, Collection<String>> properties = new java.util.HashMap<>();
         NodeList propertyElements = componentElement.getElementsByTagName(DS_PROPERTY_ELEMENT);
         for (int i = 0; i < propertyElements.getLength(); i++) {
             Element propertyElement = (Element) propertyElements.item(i);
             String propertyName = propertyElement.getAttribute(DS_PROPERTY_NAME_ATTRIBUTE);
-            String propertyValue = propertyElement.getAttribute(DS_PROPERTY_VALUE_ATTRIBUTE);
-            if (propertyName != null && !propertyName.isEmpty() && propertyValue != null && !propertyValue.isEmpty()) {
-                properties.put(propertyName, propertyValue);
+            Objects.requireNonNull(propertyName, "Property name in DS component cannot be null");
+            String propertyValue = null;
+            if (propertyElement.hasAttribute(DS_PROPERTY_VALUE_ATTRIBUTE)) {
+                propertyValue = propertyElement.getAttribute(DS_PROPERTY_VALUE_ATTRIBUTE);
             }
+            List<String> valueList = new ArrayList<>();
+            if (propertyValue != null) {
+                valueList.add(propertyValue);
+            } else {
+                // If no 'value' attribute, check for text content (could be multi-line)
+                StringTokenizer tokener = new StringTokenizer(propertyElement.getTextContent(), "\r\n");
+                while (tokener.hasMoreTokens()) {
+                    String value = tokener.nextToken().trim();
+                    if (!value.isEmpty()) {
+                        valueList.add(value);
+                    }
+                }
+            }
+            properties.put(propertyName, valueList);
         }
         return properties;
     }
@@ -568,13 +593,12 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
     /**
      * Validates servlet properties against configured patterns considering both Sling servlets and OSGi HTTP (Servlet) Whiteboard servlets.
      */
-    private void validateServletProperties(String componentName, Map<String, String> properties) {
+    private void validateServletProperties(String componentName, Map<String, Collection<String>> properties) {
         // Validate sling.servlet.paths
         if (properties.containsKey(SLING_SERVLET_PATHS)
                 && config.allowedSlingServletPathsPatterns() != null
                 && !config.allowedSlingServletPathsPatterns().isEmpty()) {
-            String[] paths = properties.get(SLING_SERVLET_PATHS).split(",");
-            for (String path : paths) {
+            for (String path : properties.get(SLING_SERVLET_PATHS)) {
                 String trimmedPath = path.trim();
                 if (config.allowedSlingServletPathsPatterns().stream()
                         .noneMatch(pattern -> pattern.matcher(trimmedPath).matches())) {
@@ -591,9 +615,7 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
         // Validate sling.servlet.resourceTypes
         if (properties.containsKey(SLING_SERVLET_RESOURCE_TYPES)
                 && config.allowedSlingServletResourceTypesPatterns() != null) {
-            String[] resourceTypes =
-                    properties.get(SLING_SERVLET_RESOURCE_TYPES).split(",");
-            for (String resourceType : resourceTypes) {
+            for (String resourceType : properties.get(SLING_SERVLET_RESOURCE_TYPES)) {
                 String trimmedResourceType = resourceType.trim();
                 if (config.allowedSlingServletResourceTypesPatterns().stream()
                         .noneMatch(
@@ -611,32 +633,34 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
         // Validate sling.servlet.resourceSuperType
         if (properties.containsKey(SLING_SERVLET_RESOURCE_SUPER_TYPE)
                 && config.allowedSlingServletResourceSuperTypePatterns() != null) {
-            String propertyValue = properties.get(SLING_SERVLET_RESOURCE_SUPER_TYPE);
-            if (config.allowedSlingServletResourceSuperTypePatterns().stream()
-                    .noneMatch(pattern -> pattern.matcher(propertyValue).matches())) {
-                reporter.error(
-                        "Sling servlet component \"%s\" has resource super type \"%s\" which does not match any of the allowed patterns [%s]",
-                        componentName,
-                        propertyValue,
-                        config.allowedSlingServletResourceSuperTypePatterns().stream()
-                                .map(Pattern::pattern)
-                                .collect(Collectors.joining(",")));
+            for (String propertyValue : properties.get(SLING_SERVLET_RESOURCE_SUPER_TYPE)) {
+                if (config.allowedSlingServletResourceSuperTypePatterns().stream()
+                        .noneMatch(pattern -> pattern.matcher(propertyValue).matches())) {
+                    reporter.error(
+                            "Sling servlet component \"%s\" has resource super type \"%s\" which does not match any of the allowed patterns [%s]",
+                            componentName,
+                            propertyValue,
+                            config.allowedSlingServletResourceSuperTypePatterns().stream()
+                                    .map(Pattern::pattern)
+                                    .collect(Collectors.joining(",")));
+                }
             }
         }
         // Validate osgi.http.whiteboard.servlet.pattern
         if (properties.containsKey(HTTP_WHITEBOARD_SERVLET_PATTERN)
                 && config.allowedHttpWhiteboardServletPatternPatterns() != null
                 && !config.allowedHttpWhiteboardServletPatternPatterns().isEmpty()) {
-            String propertyValue = properties.get(HTTP_WHITEBOARD_SERVLET_PATTERN);
-            if (config.allowedHttpWhiteboardServletPatternPatterns().stream()
-                    .noneMatch(pattern -> pattern.matcher(propertyValue).matches())) {
-                reporter.error(
-                        "Servlet component \"%s\" has OSGi HTTP/Servlet whiteboard servlet pattern \"%s\" which does not match any of the allowed patterns [%s]",
-                        componentName,
-                        propertyValue,
-                        config.allowedHttpWhiteboardServletPatternPatterns().stream()
-                                .map(Pattern::pattern)
-                                .collect(Collectors.joining(",")));
+            for (String propertyValue : properties.get(HTTP_WHITEBOARD_SERVLET_PATTERN)) {
+                if (config.allowedHttpWhiteboardServletPatternPatterns().stream()
+                        .noneMatch(pattern -> pattern.matcher(propertyValue).matches())) {
+                    reporter.error(
+                            "Servlet component \"%s\" has OSGi HTTP/Servlet whiteboard servlet pattern \"%s\" which does not match any of the allowed patterns [%s]",
+                            componentName,
+                            propertyValue,
+                            config.allowedHttpWhiteboardServletPatternPatterns().stream()
+                                    .map(Pattern::pattern)
+                                    .collect(Collectors.joining(",")));
+                }
             }
         }
     }
@@ -644,15 +668,13 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
     /**
      * Validates AuthenticationHandler path against configured patterns.
      */
-    private void validateAuthenticationHandlerPath(String componentName, Map<String, String> properties) {
+    private void validateAuthenticationHandlerPath(String componentName, Map<String, Collection<String>> properties) {
         if (config.allowedSlingAuthenticationHandlerPathPatterns() == null
                 || config.allowedSlingAuthenticationHandlerPathPatterns().isEmpty()) {
             return;
         }
         if (properties.containsKey(AUTH_HANDLER_PATH_PROPERTY)) {
-            String propertyValue = properties.get(AUTH_HANDLER_PATH_PROPERTY);
-            String[] paths = propertyValue.split(",");
-            for (String path : paths) {
+            for (String path : properties.get(AUTH_HANDLER_PATH_PROPERTY)) {
                 String trimmedPath = path.trim();
                 if (config.allowedSlingAuthenticationHandlerPathPatterns().stream()
                         .noneMatch(pattern -> pattern.matcher(trimmedPath).matches())) {
@@ -671,13 +693,12 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
     /**
      * Validates filter patterns for Sling and OSGi HTTP/Servlet Whiteboard filters.
      */
-    private void validateFilterPatterns(String componentName, Map<String, String> properties) {
+    private void validateFilterPatterns(String componentName, Map<String, Collection<String>> properties) {
         // Validate sling.filter.pattern
         if (properties.containsKey(SLING_FILTER_PATTERN)
                 && config.allowedSlingFilterPatternPatterns() != null
                 && !config.allowedSlingFilterPatternPatterns().isEmpty()) {
-            String[] patterns = properties.get(SLING_FILTER_PATTERN).split(",");
-            for (String pattern : patterns) {
+            for (String pattern : properties.get(SLING_FILTER_PATTERN)) {
                 String trimmedPattern = pattern.trim();
                 if (config.allowedSlingFilterPatternPatterns().stream()
                         .noneMatch(p -> p.matcher(trimmedPattern).matches())) {
@@ -691,12 +712,11 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
                 }
             }
         }
-        // Validate sling.filter.pattern
+        // Validate sling.filter.resourceTypes
         if (properties.containsKey(SLING_FILTER_RESOURCE_TYPES)
                 && config.allowedSlingFilterResourceTypesPatterns() != null
                 && !config.allowedSlingFilterResourceTypesPatterns().isEmpty()) {
-            String[] patterns = properties.get(SLING_FILTER_RESOURCE_TYPES).split(",");
-            for (String pattern : patterns) {
+            for (String pattern : properties.get(SLING_FILTER_RESOURCE_TYPES)) {
                 String trimmedPattern = pattern.trim();
                 if (config.allowedSlingFilterResourceTypesPatterns().stream()
                         .noneMatch(p -> p.matcher(trimmedPattern).matches())) {
@@ -714,8 +734,7 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
         if (properties.containsKey(HTTP_WHITEBOARD_FILTER_PATTERN)
                 && config.allowedHttpWhiteboardFilterPatternPatterns() != null
                 && !config.allowedHttpWhiteboardFilterPatternPatterns().isEmpty()) {
-            String[] patterns = properties.get(HTTP_WHITEBOARD_FILTER_PATTERN).split(",");
-            for (String pattern : patterns) {
+            for (String pattern : properties.get(HTTP_WHITEBOARD_FILTER_PATTERN)) {
                 String trimmedPattern = pattern.trim();
                 if (config.allowedHttpWhiteboardFilterPatternPatterns().stream()
                         .noneMatch(p -> p.matcher(trimmedPattern).matches())) {

@@ -241,6 +241,7 @@ class NamespaceValidatorsPluginTest {
                 + "    <implementation class=\"com.mycompany.impl.InvalidComponentImpl\"/>\n"
                 + "    <service>\n"
                 + "        <provide interface=\"org.apache.sling.api.SlingService\"/>\n"
+                + "        <provide interface=\"org.apache.sling.rewriter.TransformerFactory\"/>\n"
                 + "    </service>\n"
                 + "</component>";
 
@@ -682,7 +683,10 @@ class NamespaceValidatorsPluginTest {
                 + "    <service>\n"
                 + "        <provide interface=\"org.apache.sling.auth.core.spi.AuthenticationHandler\"/>\n"
                 + "    </service>\n"
-                + "    <property name=\"path\" value=\"/auth,/notallowed\"/>\n"
+                + "    <property name=\"path\">\n"
+                + "     /auth\n"
+                + "     /notallowed\n"
+                + "    </property>\n"
                 + "</component>";
         jar.putResource("OSGI-INF/AuthHandler.xml", new EmbeddedResource(dsXml.getBytes(), 0));
 
