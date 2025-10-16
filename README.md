@@ -11,8 +11,8 @@
 
 A [Bnd](https://bnd.bndtools.org/) plugin that validates OSGi bundle metadata compliance with configurable namespacing rules. This plugin helps ensure consistent naming conventions and organizational standards across OSGi bundles in enterprise projects. It validates the following aspects of an OSGi bundle
 
-- **Export Packages** - Validates that [exported packages](https://docs.osgi.org/specification/osgi.core/8.0.0/framework.module.html#framework.module.exportpackage) follow naming conventions
-- **Bundle Symbolic Names** - Ensures [bundle symbolic names](https://docs.osgi.org/specification/osgi.core/8.0.0/framework.module.html#framework.module.bsn) conform to organizational standards
+- **Export Package** - Validates that [exported packages](https://docs.osgi.org/specification/osgi.core/8.0.0/framework.module.html#framework.module.exportpackage) follow naming conventions
+- **Bundle Symbolic Name** - Ensures [bundle symbolic names](https://docs.osgi.org/specification/osgi.core/8.0.0/framework.module.html#framework.module.bsn)  follow naming conventions
 - **DS Component Provided Services** - Validates [provided service FQCNs in DS components](https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.component.html#service.component-service.element)
 - **HTTP/Servlet Whiteboard** - Validates that HTTP servlets/filters registered via [HTTP/servlet whiteboard](https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.servlet.html) are listening to specific paths only
 - **Sling Servlet/Filter** - Validates [Sling servlet](https://sling.apache.org/documentation/the-sling-engine/servlets.html) paths, resource types, and resource super types as well as [Sling filter](https://sling.apache.org/documentation/the-sling-engine/filters.html) patterns/resource types
@@ -20,10 +20,10 @@ A [Bnd](https://bnd.bndtools.org/) plugin that validates OSGi bundle metadata co
 
 ## Features
 
-### Export Packages
+### Export Package
 Validates that all exported packages match a specified regular expression pattern.
 
-### Bundle Symbolic Name sn
+### Bundle Symbolic Name
 Ensures Bundle-SymbolicName headers conform to naming conventions, with support for parameter handling (e.g., `singleton:=true`).
 
 ### DS Component Provided Services
@@ -65,7 +65,7 @@ Parameter | Type | Description
 ----------|------|-------------
 `allowedExportPackagePatterns` | Pattern[] | Regular expression(s) for validating exported package names
 `allowedBundleSymbolicNamePatterns` | Pattern[] | Regular expression(s) for validating Bundle-SymbolicName header
-`allowedServiceClassPatterns` | Pattern[] | Regular expression(s) for validating OSGi service interface FQCNs
+`allowedServiceClassPatterns` | Pattern[] | Regular expression(s) for validating provided service FQCNs of DS components
 `allowedHttpWhiteboardServletPatterns` | Pattern[] | Regular expression(s) for validating HTTP Whiteboard servlet patterns (`osgi.http.whiteboard.servlet.pattern`)
 `allowedHttpWhiteboardFilterPatterns` | Pattern[] | Regular expression(s) for validating HTTP Whiteboard filter patterns (`osgi.http.whiteboard.filter.pattern`)
 `allowedSlingServletPathsPatterns` | Pattern[] | Regular expression(s) for validating Sling servlet paths (`sling.servlet.paths`)
