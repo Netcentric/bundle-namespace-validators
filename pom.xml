@@ -32,8 +32,8 @@
   </developers>
 
   <scm>
-    <connection>scm:git:ssh://git@github.com:Netcentric/bundle-namespace-validators.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com:Netcentric/bundle-namespace-validators.git</developerConnection>
+    <connection>scm:git:ssh://git@github.com/Netcentric/bundle-namespace-validators.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/Netcentric/bundle-namespace-validators.git</developerConnection>
     <tag>HEAD</tag>
     <url>https://github.com/Netcentric/bundle-namespace-validators</url>
   </scm>
