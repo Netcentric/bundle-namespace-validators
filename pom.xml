@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>biz.netcentric.osgi.bnd</groupId>
   <artifactId>bundle-namespace-validators</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1-SNAPSHOT</version>
 
   <name>Bundle Namespace Validators Bnd Plugin</name>
   <description>Bnd plugin validating that the OSGi metadata complies with certain namespacing rules.</description>
