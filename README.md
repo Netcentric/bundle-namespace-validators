@@ -11,8 +11,8 @@
 
 A [Bnd](https://bnd.bndtools.org/) plugin that validates OSGi bundle metadata compliance with configurable namespacing rules. This plugin helps ensure consistent naming conventions and organizational standards across OSGi bundles in enterprise projects. It validates the following aspects of an OSGi bundle
 
-- **Export Packages** - Validates that exported packages follow naming conventions
-- **Bundle Symbolic Names** - Ensures bundle symbolic names conform to organizational standards
+- **Export Packages** - Validates that [exported packages](https://docs.osgi.org/specification/osgi.core/8.0.0/framework.module.html#framework.module.exportpackage) follow naming conventions
+- **Bundle Symbolic Names** - Ensures [bundle symbolic names](https://docs.osgi.org/specification/osgi.core/8.0.0/framework.module.html#framework.module.bsn) conform to organizational standards
 - **DS Component Provided Services** - Validates [provided service FQCNs in DS components](https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.component.html#service.component-service.element)
 - **HTTP/Servlet Whiteboard** - Validates that HTTP servlets/filters registered via [HTTP/servlet whiteboard](https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.servlet.html) are listening to specific paths only
 - **Sling Servlet/Filter** - Validates [Sling servlet](https://sling.apache.org/documentation/the-sling-engine/servlets.html) paths, resource types, and resource super types as well as [Sling filter](https://sling.apache.org/documentation/the-sling-engine/filters.html) patterns/resource types
