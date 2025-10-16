@@ -559,7 +559,7 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
 
     /**
      * Retrieves all properties of a DS component as a map of property name to collection of values.
-     * Handles properties with a 'value' attribute (comma-separated values) and supports multi-valued properties.
+     * Handles (single-value) properties with a 'value' attribute and supports multi-valued properties in text content.
      */
     private Map<String, Collection<String>> getComponentProperties(Element componentElement) {
         Map<String, Collection<String>> properties = new java.util.HashMap<>();

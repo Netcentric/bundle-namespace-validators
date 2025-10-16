@@ -28,8 +28,20 @@ Ensures Bundle-SymbolicName headers conform to naming conventions, with support 
 
 ### DS Component Provided Services
 Validates that Declarative Services components only provide services whose fully qualified class names match specified patterns.
-Apart from the explicitly managed configuration there is implicit allows for all those commons services which have multi-tenancy support built-in via a specific (validated) OSGi property. Those
-are validated on a different level.
+
+#### Implicitly Allowed Services
+
+In addition to explicitly configured patterns, the following services are always allowed by default because they are known to support multi-tenancy or are unlikely to cause namespace clashes:
+
+- `javax.servlet.Servlet`
+- `jakarta.servlet.Servlet`
+- `javax.servlet.Filter`
+- `jakarta.servlet.Filter`
+- `org.apache.sling.api.adapter.AdapterFactory`
+- `org.apache.sling.rewriter.TransformerFactory`
+- `com.adobe.granite.workflow.exec.WorkflowProcess`
+- `com.day.cq.workflow.exec.WorkflowProcess`
+- `org.apache.sling.auth.core.spi.AuthenticationHandler`
 
 ### HTTP/Servlet Whiteboard
 For DS components implementing `javax.servlet.Servlet` or `jakarta.servlet.Servlet`, validates
@@ -100,7 +112,7 @@ In general you add this artifact as plugin dependency to the Maven plugin. Then 
                 com.mycompany.services.*
             
             -plugin.namespace: biz.netcentric.osgi.bnd.NamespaceValidatorsPlugin; \
-                allowedExportPackagePattern="com\\.mycompany\\..*"; \s
+                allowedExportPackagePattern="com\\.mycompany\\..*"; \
                 allowedBundleSymbolicNamePatterns="com\\.mycompany\\.bundles\\..*"; \
                 allowedServiceClassPatterns="com\\.mycompany\\..*"; \
                 allowedSlingServletPathsPattern="/apps/myproject/.*"; \
@@ -108,6 +120,13 @@ In general you add this artifact as plugin dependency to the Maven plugin. Then 
                 allowedSlingServletResourceSuperTypePattern="/apps/myproject/.*";
         ]]></bnd>
     </configuration>
+    <dependencies>
+        <dependency>
+            <groupId>biz.netcentric.osgi.bnd</groupId>
+            <artifactId>bundle-namespace-validators</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
 </plugin>
 ```
 
