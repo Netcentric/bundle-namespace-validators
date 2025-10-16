@@ -620,7 +620,7 @@ class NamespaceValidatorsPluginTest {
     void testAuthenticationHandlerPath_Invalid() throws Exception {
         Map<String, String> config = new HashMap<>();
         config.put("allowedExportPackagePatterns", ".*");
-        config.put("allowedAuthenticationHandlerPathPatterns", "/auth|/secure");
+        config.put("allowedSlingAuthenticationHandlerPathPatterns", "/auth|/secure");
         plugin.setProperties(config);
 
         when(analyzer.getProperty("Service-Component")).thenReturn("OSGI-INF/AuthHandler.xml");
@@ -671,7 +671,7 @@ class NamespaceValidatorsPluginTest {
     void testAuthenticationHandlerPath_MultiplePaths() throws Exception {
         Map<String, String> config = new HashMap<>();
         config.put("allowedExportPackagePatterns", ".*");
-        config.put("allowedAuthenticationHandlerPathPatterns", "/auth|/secure");
+        config.put("allowedSlingAuthenticationHandlerPathPatterns", "/auth|/secure");
         plugin.setProperties(config);
 
         when(analyzer.getProperty("Service-Component")).thenReturn("OSGI-INF/AuthHandler.xml");

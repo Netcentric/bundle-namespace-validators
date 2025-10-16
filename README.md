@@ -13,34 +13,35 @@ A [Bnd](https://bnd.bndtools.org/) plugin that validates OSGi bundle metadata co
 
 - **Export Packages** - Validates that exported packages follow naming conventions
 - **Bundle Symbolic Names** - Ensures bundle symbolic names conform to organizational standards
-- **OSGi DS Component Service Interfaces** - Validates service interface FQCNs in OSGi DS components
-- **OSGi HTTP/Servlet Whiteboard** - Validates that HTTP servlets/filters registered via [HTTP/servlet whiteboard](https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.servlet.html) are listening to specific paths only
+- **DS Component Provided Services** - Validates [provided service FQCNs in DS components](https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.component.html#service.component-service.element)
+- **HTTP/Servlet Whiteboard** - Validates that HTTP servlets/filters registered via [HTTP/servlet whiteboard](https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.servlet.html) are listening to specific paths only
 - **Sling Servlet/Filter** - Validates [Sling servlet](https://sling.apache.org/documentation/the-sling-engine/servlets.html) paths, resource types, and resource super types as well as [Sling filter](https://sling.apache.org/documentation/the-sling-engine/filters.html) patterns/resource types
 - **Sling Authentication Handler** - Validates a [Sling Authentication Handler](https://sling.apache.org/documentation/the-sling-engine/authentication/authentication-authenticationhandler.html) is registered to a specific path only
 
 ## Features
 
-### Export Package Validation
+### Export Packages
 Validates that all exported packages match a specified regular expression pattern.
 
-### Bundle Symbolic Name Validation
+### Bundle Symbolic Name sn
 Ensures Bundle-SymbolicName headers conform to naming conventions, with support for parameter handling (e.g., `singleton:=true`).
 
-### OSGi DS Component Service Validation
-Validates that OSGi Declarative Services components only implement services whose fully qualified class names match specified patterns.
-Apart from the explicitly managed configuration there is implicit allows for all those commons services which have multitenancy via a specific (validated) OSGi property.r
+### DS Component Provided Services
+Validates that Declarative Services components only provide services whose fully qualified class names match specified patterns.
+Apart from the explicitly managed configuration there is implicit allows for all those commons services which have multi-tenancy support built-in via a specific (validated) OSGi property. Those
+are validated on a different level.
 
-### OSGi HTTP/Servlet Whiteboardd
+### HTTP/Servlet Whiteboard
 For DS components implementing `javax.servlet.Servlet` or `jakarta.servlet.Servlet`, validates
 
-- `osgi.http.whiteboard.servlet.pattern` - Servlet path pattern
+- `osgi.http.whiteboard.servlet.pattern` - Servlet pattern
 
 
 For DS components implementing `javax.servlet.Filter` or `jakarta.servlet.Filter`, validates
 
 - `osgi.http.whiteboard.filter.pattern` - Servlet filter pattern
 
-### Sling Servlet/Filter Property Validation
+### Sling Servlet/Filter
 For DS components implementing `javax.servlet.Servlet` or `jakarta.servlet.Servlet`, validates:
 - `sling.servlet.paths` - Servlet path patterns
 - `sling.servlet.resourceTypes` - Resource type patterns  
@@ -65,14 +66,14 @@ Parameter | Type | Description
 `allowedExportPackagePatterns` | Pattern[] | Regular expression(s) for validating exported package names
 `allowedBundleSymbolicNamePatterns` | Pattern[] | Regular expression(s) for validating Bundle-SymbolicName header
 `allowedServiceClassPatterns` | Pattern[] | Regular expression(s) for validating OSGi service interface FQCNs
-`allowedOsgiHttpWhiteboardServletPatterns` | Pattern[] | Regular expression(s) for validating OSGi HTTP Whiteboard servlet patterns (`osgi.http.whiteboard.servlet.pattern`)
-`allowedOsgiHttpWhiteboardFilterPatterns` | Pattern[] | Regular expression(s) for validating OSGi HTTP Whiteboard filter patterns (`osgi.http.whiteboard.filter.pattern`)
-`slingServletPathsPatterns` | Pattern[] | Regular expression(s) for validating Sling servlet paths (`sling.servlet.paths`)
-`slingServletResourceTypesPatterns` | Pattern[] | Regular expression(s) for validating Sling servlet resource types (`sling.servlet.resourceTypes`)
-`slingServletResourceSuperTypePatterns` | Pattern[] | Regular expression(s) for validating Sling servlet resource super types (`sling.servlet.resourceSuperType`)
-`slingFilterPatterns` | Pattern[] | Regular expression(s) for validating Sling filter patterns (`sling.filter.pattern`)
-`slingFilterResourceTypesPatterns` | Pattern[] | Regular expression(s) for validating Sling filter resource types (`sling.filter.resourceTypes`)
-`slingAuthHandlerPathPatterns` | Pattern[] | Regular expression(s) for validating Sling Authentication Handler path property (`path`)
+`allowedHttpWhiteboardServletPatterns` | Pattern[] | Regular expression(s) for validating HTTP Whiteboard servlet patterns (`osgi.http.whiteboard.servlet.pattern`)
+`allowedHttpWhiteboardFilterPatterns` | Pattern[] | Regular expression(s) for validating HTTP Whiteboard filter patterns (`osgi.http.whiteboard.filter.pattern`)
+`allowedSlingServletPathsPatterns` | Pattern[] | Regular expression(s) for validating Sling servlet paths (`sling.servlet.paths`)
+`allowedSlingServletResourceTypesPatterns` | Pattern[] | Regular expression(s) for validating Sling servlet resource types (`sling.servlet.resourceTypes`)
+`allowedSlingServletResourceSuperTypePatterns` | Pattern[] | Regular expression(s) for validating Sling servlet resource super types (`sling.servlet.resourceSuperType`)
+`allowedSlingFilterPatterns` | Pattern[] | Regular expression(s) for validating Sling filter patterns (`sling.filter.pattern`)
+`allowedSlingFilterResourceTypesPatterns` | Pattern[] | Regular expression(s) for validating Sling filter resource types (`sling.filter.resourceTypes`)
+`allowedSlingAuthenticationHandlerPathPatterns` | Pattern[] | Regular expression(s) for validating Sling Authentication Handler's path property (`path`)
 
 Each parameter may take multiple [regular expression patterns](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) separated by comma. That makes the comma itself unusable within the regular expression pattern itself, however this shouldn't be necessary there.
 All parameters are optional. If not set the according property/name/header is not validated.

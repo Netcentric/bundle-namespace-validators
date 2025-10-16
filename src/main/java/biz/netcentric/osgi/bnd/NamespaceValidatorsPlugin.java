@@ -95,13 +95,14 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
             "allowedExportPackagePatterns",
             "allowedServiceClassPatterns",
             "allowedBundleSymbolicNamePatterns",
+            "allowedHttpWhiteboardServletPatternPatterns",
+            "allowedHttpWhiteboardFilterPatternPatterns",
             "allowedSlingServletPathsPatterns",
             "allowedSlingServletResourceTypesPatterns",
             "allowedSlingServletResourceSuperTypePatterns",
-            "allowedHttpWhiteboardServletPatternPatterns",
-            "allowedAuthenticationHandlerPathPatterns",
             "allowedSlingFilterPatternPatterns",
-            "allowedHttpWhiteboardFilterPatternPatterns");
+            "allowedSlingFilterResourceTypesPatterns",
+            "allowedSlingAuthenticationHandlerPathPatterns");
 
     private static final Collection<Pattern> ALLOWED_TENANT_SPECIFIC_SERVICES;
 
@@ -156,6 +157,18 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
         Collection<Pattern> allowedBundleSymbolicNamePatterns();
 
         /**
+         * Patterns for validating HTTP Whiteboard filter pattern property (osgi.http.whiteboard.filter.pattern).
+         * If not specified, no HTTP Whiteboard filter pattern validation is performed.
+         */
+        Collection<Pattern> allowedHttpWhiteboardFilterPatternPatterns();
+
+        /**
+         * Patterns for validating HTTP Whiteboard servlet pattern property (osgi.http.whiteboard.servlet.pattern).
+         * If not specified, no HTTP Whiteboard servlet pattern validation is performed.
+         */
+        Collection<Pattern> allowedHttpWhiteboardServletPatternPatterns();
+
+        /**
          * Pattern for validating Sling servlet paths property (sling.servlet.paths).
          * If not specified, no servlet paths validation is performed.
          */
@@ -174,16 +187,10 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
         Collection<Pattern> allowedSlingServletResourceSuperTypePatterns();
 
         /**
-         * Patterns for validating HTTP Whiteboard servlet pattern property (osgi.http.whiteboard.servlet.pattern).
-         * If not specified, no HTTP Whiteboard servlet pattern validation is performed.
-         */
-        Collection<Pattern> allowedHttpWhiteboardServletPatternPatterns();
-
-        /**
-         * Patterns for validating AuthenticationHandler path property (path).
+         * Patterns for validating Slings AuthenticationHandler path property (path).
          * If not specified, no AuthenticationHandler path validation is performed.
          */
-        Collection<Pattern> allowedAuthenticationHandlerPathPatterns();
+        Collection<Pattern> allowedSlingAuthenticationHandlerPathPatterns();
 
         /**
          * Patterns for validating Sling filter pattern property (sling.filter.pattern).
@@ -196,12 +203,6 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
          * If not specified, no servlet resource types validation is performed.
          */
         Collection<Pattern> allowedSlingFilterResourceTypesPatterns();
-
-        /**
-         * Patterns for validating HTTP Whiteboard filter pattern property (osgi.http.whiteboard.filter.pattern).
-         * If not specified, no HTTP Whiteboard filter pattern validation is performed.
-         */
-        Collection<Pattern> allowedHttpWhiteboardFilterPatternPatterns();
     }
 
     @Override
@@ -303,8 +304,9 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
                                 .isEmpty())
                 || (config.allowedHttpWhiteboardServletPatternPatterns() != null
                         && !config.allowedHttpWhiteboardServletPatternPatterns().isEmpty())
-                || (config.allowedAuthenticationHandlerPathPatterns() != null
-                        && !config.allowedAuthenticationHandlerPathPatterns().isEmpty());
+                || (config.allowedSlingAuthenticationHandlerPathPatterns() != null
+                        && !config.allowedSlingAuthenticationHandlerPathPatterns()
+                                .isEmpty());
         if (!shouldCheck) {
             return; // No relevant patterns configured, skip validation
         }
@@ -643,8 +645,8 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
      * Validates AuthenticationHandler path against configured patterns.
      */
     private void validateAuthenticationHandlerPath(String componentName, Map<String, String> properties) {
-        if (config.allowedAuthenticationHandlerPathPatterns() == null
-                || config.allowedAuthenticationHandlerPathPatterns().isEmpty()) {
+        if (config.allowedSlingAuthenticationHandlerPathPatterns() == null
+                || config.allowedSlingAuthenticationHandlerPathPatterns().isEmpty()) {
             return;
         }
         if (properties.containsKey(AUTH_HANDLER_PATH_PROPERTY)) {
@@ -652,13 +654,13 @@ public class NamespaceValidatorsPlugin implements VerifierPlugin, Plugin {
             String[] paths = propertyValue.split(",");
             for (String path : paths) {
                 String trimmedPath = path.trim();
-                if (config.allowedAuthenticationHandlerPathPatterns().stream()
+                if (config.allowedSlingAuthenticationHandlerPathPatterns().stream()
                         .noneMatch(pattern -> pattern.matcher(trimmedPath).matches())) {
                     reporter.error(
                             "AuthenticationHandler component \"%s\" has path \"%s\" which does not match any of the allowed patterns [%s]",
                             componentName,
                             trimmedPath,
-                            config.allowedAuthenticationHandlerPathPatterns().stream()
+                            config.allowedSlingAuthenticationHandlerPathPatterns().stream()
                                     .map(Pattern::pattern)
                                     .collect(Collectors.joining(",")));
                 }
