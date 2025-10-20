@@ -112,10 +112,10 @@ In general you add this artifact as plugin dependency to the Maven plugin. Then 
                 com.mycompany.services.*
             
             -plugin.namespace: biz.netcentric.osgi.bnd.NamespaceValidatorsPlugin; \
-                allowedExportPackagePattern="com\\.mycompany\\..*"; \
+                allowedExportPackagePattern="com\\.mycompany\\.myproject\\..**"; \
                 allowedBundleSymbolicNamePatterns="com\\.mycompany\\.bundles\\..*"; \
-                allowedServiceClassPatterns="com\\.mycompany\\..*"; \
-                allowedSlingServletPathsPattern="/apps/myproject/.*"; \
+                allowedServiceClassPatterns="com\\.mycompany\\.myproject\\..*"; \
+                allowedSlingServletPathsPattern="/bin/myproject/.*"; \
                 allowedSlingServletResourceTypesPatterns="/apps/myproject/.*"; \
                 allowedSlingServletResourceSuperTypePattern="/apps/myproject/.*";
         ]]></bnd>
